@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>accurdocs — 政策/金融文档精准检索</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root { --bg:#f6f7f9; --card:#fff; --ink:#1a2332; --sub:#5c6b7f; --line:#e3e8ef;
+        --acc:#1f6feb; --ok:#1a7f37; --bad:#c9372c; --warn:#9a6700; }
+* { box-sizing:border-box; }
+body { margin:0; font:14px/1.6 "Segoe UI","Microsoft YaHei",sans-serif;
+       background:var(--bg); color:var(--ink); }
+header { background:var(--ink); color:#fff; padding:10px 20px; display:flex;
+         align-items:center; gap:16px; }
+header h1 { font-size:17px; margin:0; font-weight:600; }
+header .status { margin-left:auto; font-size:12px; opacity:.85; }
+nav { display:flex; gap:4px; padding:8px 20px 0; background:var(--card);
+      border-bottom:1px solid var(--line); }
+nav button { border:none; background:none; padding:10px 16px; font-size:14px;
+             cursor:pointer; color:var(--sub); border-bottom:2px solid transparent; }
+nav button.active { color:var(--acc); border-bottom-color:var(--acc); font-weight:600; }
+main { padding:16px 20px; max-width:1180px; margin:0 auto; }
+section { display:none; }
+section.active { display:block; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:10px;
+        padding:16px 18px; margin-bottom:14px; }
+.card h2 { margin:0 0 10px; font-size:15px; }
+.row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+input[type=text], input[type=password], input[type=file], select, textarea {
+  padding:8px 10px; border:1px solid var(--line); border-radius:7px; font:inherit;
+  background:#fff; }
+textarea { width:100%; min-height:72px; resize:vertical; }
+button { padding:8px 14px; border:none; border-radius:7px; cursor:pointer;
+         background:var(--acc); color:#fff; font:inherit; }
+button.ghost { background:#eef2f7; color:var(--ink); }
+button.danger { background:var(--bad); }
+button:disabled { opacity:.5; cursor:not-allowed; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th,td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--line); }
+th { color:var(--sub); font-weight:600; background:#fafbfc; }
+.tag { display:inline-block; padding:1px 8px; border-radius:10px; font-size:11px; }
+.tag.ok { background:#e6f4ea; color:var(--ok); }
+.tag.bad { background:#ffebe9; color:var(--bad); }
+.tag.pend { background:#fff8c5; color:var(--warn); }
+.mono { font-family:Consolas,monospace; font-size:12px; }
+.answer-box { background:#f0f6ff; border:1px solid #c8dcf8; border-radius:8px;
+              padding:12px 14px; white-space:pre-wrap; }
+.cite { background:#f6f8fa; border-left:3px solid var(--acc); padding:8px 10px;
+        margin:6px 0; font-size:12.5px; border-radius:0 6px 6px 0; }
+.hint { color:var(--sub); font-size:12px; }
+#upload-result { white-space:pre-wrap; }
+.scroll { max-height:420px; overflow:auto; }
+#toast { position:fixed; right:18px; bottom:18px; background:var(--ink); color:#fff;
+         padding:11px 18px; border-radius:9px; opacity:0; transition:opacity .25s;
+         max-width:420px; z-index:99; }
+.scope-bar { display:flex; gap:10px; align-items:center; background:#f6f8fa;
+             border:1px dashed var(--line); border-radius:8px; padding:8px 12px; }
+.q-card { border:1px solid var(--line); border-left:3px solid #1f6feb; border-radius:8px;
+          padding:10px 12px; margin:10px 0; background:#fff; }
+.q-head { margin-bottom:6px; }
+.q-body { background:#f6f8fa; border-radius:6px; padding:8px 10px; white-space:pre-wrap; }
+.q-cites { margin-top:8px; }
+/* WS-G：正文 + 悬浮标签右列（标签纵向归列，不挤正文流） */
+.ans-row { display:flex; gap:10px; align-items:flex-start; }
+.ans-text { flex:1; min-width:0; }
+.ans-tags { flex:0 0 120px; display:flex; flex-direction:column; gap:6px; padding-top:8px; }
+.ref-tag { display:inline-block; background:#eef2f7; border:1px solid var(--line);
+           border-radius:12px; padding:2px 10px; font-size:11px; cursor:pointer;
+           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:118px; }
+.ref-tag:hover { background:#d8e6f8; border-color:var(--acc); }
+/* 方案面板 */
+.plan-cols { display:grid; grid-template-columns: 1.4fr 1fr; gap:14px; }
+.plan-h { font-size:13px; margin:4px 0 8px; }
+.plan-item { border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:8px; }
+.plan-item.reason { border-left:3px solid var(--warn); background:#fffdf5; }
+.plan-item.retrieve { border-left:3px solid var(--acc); }
+.plan-meta { font-size:11px; color:var(--sub); margin:3px 0; }
+.variant { font-size:11px; color:var(--sub); margin:2px 0 2px 18px; }
+.conf-badge { display:inline-block; background:#e6f4ea; color:var(--ok); border-radius:8px;
+              padding:0 6px; font-size:10px; margin-right:4px; }
+/* 阅读器 */
+.reader-card { max-width:none; }
+.reader-split { display:flex; gap:10px; height:72vh; }
+#reader-pdf { flex:1; border:1px solid var(--line); border-radius:8px;
+  width:100%; height:100%; background:#525659; }
+.tree-node.cur-page { background:#ddf4ff; font-weight:600; }
+.reader-tree { flex:0 0 240px; border:1px solid var(--line); border-radius:8px;
+               overflow:auto; background:#fafbfc; padding:8px; }
+.tree-node { padding:2px 6px; cursor:pointer; border-radius:4px; font-size:12px;
+             white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tree-node:hover { background:#eef2f7; }
+.tree-node.cite-hit { background:#d8e6f8; font-weight:600; }
+.tree-node.ev-hit { background:#fdf3d7; }
+.blk { margin:10px 0; padding:8px 10px; border-left:3px solid transparent; }
+.blk.cite-hit { border-left-color:var(--acc); background:#f6faff; }
+.blk.ev-hit { border-left-color:#e3b341; background:#fffdf6; }
+.blk-title { font-weight:600; margin-bottom:4px; }
+/* 历史 */
+.hist-item { border-bottom:1px solid var(--line); padding:8px 4px; cursor:pointer; }
+.hist-item:hover { background:#fafbfc; }
+/* 富化倒计时 */
+.rich-bar-wrap { background:#eef2f7; border-radius:8px; height:14px; overflow:hidden; }
+/* 公式数学渲染（KaTeX） */
+.math-src { overflow-x:auto; margin:6px 0; }
+.math-src .katex-display { margin:0.4em 0; }
+.math-fallback { font-family:Consolas,monospace; font-size:12px; white-space:pre-wrap; }
+/* 点击反馈：hover 提亮 / :active 按压（所有可点击控件） */
+button, .ref-tag, .tree-node, .hist-item, nav button {
+  transition: transform .08s ease, filter .12s ease, background .12s ease; }
+button:not(:disabled):hover { filter: brightness(1.08); }
+button:not(:disabled):active { transform: translateY(1px) scale(.98); filter: brightness(.9); }
+nav button:hover { background: #eef2f7; }
+nav button:active { transform: translateY(1px); }
+.ref-tag:active, .tree-node:active, .hist-item:active, a[href]:active { transform: scale(.97); opacity:.75; }
+select:hover, input[type=text]:hover, input[type=password]:hover, input[type=file]:hover {
+  border-color: var(--acc); }
+select, input[type=checkbox], input[type=radio] { cursor: pointer; }
+button.busy { opacity: .75; cursor: progress; }
+/* 引用跳转落点闪烁 */
+.blk-flash { animation: blk-flash 1.6s ease-out; }
+@keyframes blk-flash { 0% { background: #ffe9a8; } 100% { background: transparent; } }
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>accurdocs · 政策/金融文档精准检索</h1>
+  <span class="hint" style="color:#9fb0c3">宁可拒答 · 不可幻觉</span>
+  <span class="status" id="health">连接中…</span>
+</header>
+<div id="llm-banner" style="display:none;background:var(--bad);color:#fff;padding:8px 18px;font-size:13px">
+  ⚠️ <span id="llm-banner-text">LLM 连接异常</span> —— 请到「API / 模型配置」检查密钥、地址与有效期
+</div>
+<nav id="tabs">
+  <button data-tab="ask" class="active">问答检索</button>
+  <button data-tab="reader">原文阅读</button>
+  <button data-tab="docs">文档管理</button>
+  <button data-tab="history">历史</button>
+  <button data-tab="config">API / 模型配置</button>
+</nav>
+<main>
+
+<!-- ================= 问答检索 ================= -->
+<section id="tab-ask" class="active">
+  <div class="card">
+    <h2>提问</h2>
+    <textarea id="q" placeholder="输入问题，例如：资本充足率的最低要求是多少？"></textarea>
+    <div class="row" style="margin-top:10px">
+      <label>生效时点 <input type="text" id="as_of" placeholder="YYYY-MM-DD（默认今天）" size="16"></label>
+      <label>模式 <select id="mode">
+        <option value="quote">条款事实</option>
+        <option value="analyze">综合分析</option>
+      </select></label>
+      <label class="hint"><input type="checkbox" id="need-review"> 提交人工复核后出结果</label>
+      <button id="btn-ask">提问</button>
+      <button class="ghost" id="btn-search-only">仅检索不作答</button>
+    </div>
+    <div class="scope-bar" style="margin-top:10px">
+      <strong>检索范围：</strong>
+      <label><input type="radio" name="scope" value="global" checked> 全库</label>
+      <label><input type="radio" name="scope" value="libs"> 选库</label>
+      <select id="scope-lib"><option value="">（选择库）</option></select>
+      <label><input type="radio" name="scope" value="docs"> 勾选的文档</label>
+      <span class="hint" id="scope-count"></span>
+      <button class="ghost" onclick="switchTab('docs')" style="margin-left:auto">去勾选…</button>
+    </div>
+  </div>
+  <div class="card" id="plan-card" style="display:none">
+    <h2>检索方案 <span class="hint" id="plan-summary"></span></h2>
+    <div class="plan-cols">
+      <div>
+        <h3 class="plan-h">结构化检索指令</h3>
+        <div id="plan-items"></div>
+      </div>
+      <div>
+        <h3 class="plan-h" style="color:var(--warn)">分析推理要求（不直接检索）</h3>
+        <div id="plan-reason"></div>
+        <div id="plan-clarify" class="hint"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="btn-plan-run">执行选中检索</button>
+      <button class="ghost" id="btn-plan-all">全部执行</button>
+      <button class="ghost" id="btn-plan-cancel">取消</button>
+      <label class="hint"><input type="checkbox" id="plan-gate" checked> 检索前确认方案</label>
+    </div>
+  </div>
+  <div class="card" id="result-card" style="display:none">
+    <h2>结果 <span id="r-status"></span></h2>
+    <div id="stream-cards"></div>
+    <div class="ans-row" id="r-answer-row" style="display:none">
+      <div class="answer-box ans-text" id="r-answer"></div>
+      <div class="ans-tags" id="r-tags"></div>
+    </div>
+    <div id="r-synth"></div>
+    <div id="rich-progress"></div>
+    <div id="r-cites"></div>
+    <div class="hint" id="r-meta"></div>
+  </div>
+  <div class="card" id="hits-card" style="display:none">
+    <h2>检索命中</h2>
+    <div class="scroll"><table id="hits-table"></table></div>
+  </div>
+</section>
+
+<!-- ================= 文档管理 ================= -->
+<section id="tab-docs">
+  <div class="card">
+    <h2>上传文档</h2>
+    <div class="row">
+      <input type="file" id="file" multiple accept=".pdf,.docx,.doc,.md,.txt">
+      <button id="btn-upload">上传入库</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input type="text" id="path-ref" placeholder="或输入服务器上的文件路径，如 D:\docs\某办法.pdf" size="52">
+      <button class="ghost" id="btn-path-ingest">按路径入库</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label>生效日期 <input type="text" id="eff-date" placeholder="YYYY-MM-DD，留空自动从文中提取（如'自2025年6月1日起施行'）" size="52"></label>
+    </div>
+    <div class="hint" id="upload-result"></div>
+    <div id="upload-progress"></div>
+  </div>
+  <div class="card">
+    <h2>文档库 <span class="hint">（勾选 = 加入检索范围 / 归档对象）</span></h2>
+    <div class="row" style="margin-bottom:8px">
+      <input type="text" id="lib-name" placeholder="归档命名（如：电力市场），勾选后一键归档" size="34">
+      <button id="btn-archive-sel">归档勾选</button>
+      <select id="ai-scope">
+        <option value="unarchived">AI 归档：未归档</option>
+        <option value="all">AI 归档：全部文档</option>
+        <option value="selected">AI 归档：勾选的</option>
+      </select>
+      <button class="ghost" id="btn-ai-archive">AI 自动归档</button>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <label>按库筛选 <select id="lib-filter"><option value="">全部</option></select></label>
+      <button class="ghost" onclick="withBusy(this,()=>loadDocs())">刷新</button>
+      <button class="danger" id="btn-del-docs">删除勾选文档</button>
+      <span class="hint" id="docs-count"></span>
+    </div>
+    <div class="scroll"><table id="docs-table"></table></div>
+  </div>
+</section>
+
+<!-- ================= 原文阅读（原 PDF 视图） ================= -->
+<section id="tab-reader">
+  <div class="card reader-card">
+    <div class="row" style="margin-bottom:8px">
+      <strong>原文阅读</strong>
+      <select id="reader-doc"></select>
+      <span class="hint" id="reader-info"></span>
+      <label class="hint">跳页 <input type="number" id="reader-page" min="1" value="1" style="width:64px"></label>
+      <button class="ghost" onclick="withBusy(this,()=>loadReader(true))">刷新</button>
+      <span class="hint" style="margin-left:auto">
+        <span class="tag ok">已校验引用</span>
+        <span class="tag pend">检索证据</span> 树上高亮 · 点击直达来源页
+      </span>
+    </div>
+    <div class="reader-split">
+      <div class="reader-tree scroll" id="reader-tree"></div>
+      <iframe id="reader-pdf" title="原文 PDF"></iframe>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 历史 ================= -->
+<section id="tab-history">
+  <div class="card">
+    <h2>检索历史 <span class="hint">（问答记录 · 可下钻 trace）</span></h2>
+    <div class="row" style="margin-bottom:8px">
+      <select id="hist-kind">
+        <option value="all">全部</option>
+        <option value="answered">已回答</option>
+        <option value="refused">拒答</option>
+        <option value="batch">批量</option>
+      </select>
+      <input type="text" id="hist-q" placeholder="搜索问题关键词" size="24">
+      <button class="ghost" onclick="withBusy(this,()=>loadHistory())">查询</button>
+      <button class="ghost" onclick="withBusy(this,()=>loadHistory(-1))">← 上一页</button>
+      <button class="ghost" onclick="withBusy(this,()=>loadHistory(1))">下一页 →</button>
+      <span class="hint" id="hist-count"></span>
+    </div>
+    <div id="hist-list"></div>
+  </div>
+</section>
+
+<!-- ================= 配置 ================= -->
+<section id="tab-config">
+  <div class="card">
+    <h2>LLM / 检索配置 <span class="hint">（写入项目 .env，密钥不回显）</span></h2>
+    <div class="row">
+      <label>供应商 <select id="cfg-provider">
+        <option value="anthropic">anthropic</option>
+        <option value="deepseek">deepseek</option>
+        <option value="glm">glm</option>
+      </select></label>
+      <label>模型 <input type="text" id="cfg-model" size="22"></label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label>Base URL <input type="text" id="cfg-baseurl" size="46"></label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label>API Key / Token <input type="password" id="cfg-key" size="46" placeholder="留空则不修改"></label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label>Embedding <select id="cfg-embed">
+        <option value="hash">hash（冒烟）</option>
+        <option value="fastembed">fastembed · bge-small-zh（生产）</option>
+      </select></label>
+      <button id="btn-save-cfg">保存配置</button>
+      <button class="ghost" id="btn-test-llm">测试 LLM 连通</button>
+      <button class="ghost" id="btn-test-vision">测试视觉能力</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label>视觉模型 <input type="text" id="cfg-vision-model" size="22" placeholder="留空复用主模型"></label>
+      <label>视觉 Base URL <input type="text" id="cfg-vision-baseurl" size="30" placeholder="留空复用主地址"></label>
+      <label>视觉 API Key <input type="password" id="cfg-vision-key" size="24" placeholder="留空则不修改"></label>
+    </div>
+    <div class="hint">复杂图表（研报/论文类）数值转写需要带视觉能力的 API Key；未配置则图表数值类问题拒答（宁可拒答，不可给错值）。</div>
+    <div class="hint" id="cfg-result"></div>
+  </div>
+  <div class="card">
+    <h2>服务端点</h2>
+    <div class="hint mono">
+      REST API 文档: <b>/docs</b>（Swagger） ·
+      MCP(stdio): <b>start_mcp.bat</b> ·
+      MCP(HTTP): <b>start_mcp.bat --http --port 8100</b> → http://127.0.0.1:8100/mcp
+    </div>
+  </div>
+</section>
+
+</main>
+<div id="toast"></div>
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const selDocs = new Set();
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.style.opacity = 1;
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.opacity = 0, 3200);
+}
+// 点击反馈：异步按钮统一 禁用+加"…"+完成恢复——看得出已被点击、看得出在起作用
+async function withBusy(btn, fn) {
+  if (!btn || btn.disabled) return;
+  const orig = btn.textContent;
+  btn.disabled = true; btn.classList.add('busy');
+  btn.textContent = orig + '…';
+  try { return await fn(); }
+  finally { btn.disabled = false; btn.classList.remove('busy'); btn.textContent = orig; }
+}
+// JS 静默失败防线：任何未捕获异常都浮出 toast，不再"点了没反应"
+window.addEventListener('error', e => toast('页面错误: ' + e.message));
+window.addEventListener('unhandledrejection', e => toast('请求错误: ' + (e.reason?.message || e.reason)));
+function switchTab(name) {
+  $$('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  $$('main section').forEach(s => s.classList.toggle('active', s.id === 'tab-' + name));
+}
+$$('#tabs button').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) { const t = await r.text(); throw new Error(t.slice(0, 200)); }
+  return r.json();
+}
+function updateScopeCount() {
+  $('#scope-count').textContent = `已选文档 ${selDocs.size} 个`;
+}
+
+// ---------- 健康检查 + LLM 连通主动提醒 ----------
+api('/healthz').then(() => $('#health').textContent = '服务在线')
+  .catch(() => $('#health').textContent = '服务离线');
+// 连接恢复即自动收起异常提示（不等下一轮体检）
+function markLlmOk() {
+  $('#llm-banner').style.display = 'none';
+  $('#health').textContent = '服务在线';
+  $('#health').style.background = '';
+}
+async function checkLlm() {
+  try {
+    const r = await api('/v1/config/test', { method: 'POST' });
+    if (r.ok) {
+      markLlmOk();
+    } else {
+      $('#llm-banner').style.display = 'block';
+      $('#llm-banner-text').textContent =
+        `LLM 连接失败（${r.error || '配置过期/密钥无效/网络不通'}）`;
+      $('#health').textContent = 'LLM 异常';
+      $('#health').style.background = 'var(--bad)';
+    }
+  } catch (e) {
+    $('#llm-banner').style.display = 'block';
+    $('#llm-banner-text').textContent = 'LLM 连通性检测失败（服务或配置异常）';
+    $('#health').textContent = 'LLM 异常';
+    $('#health').style.background = 'var(--bad)';
+  }
+}
+checkLlm();
+setInterval(checkLlm, 5 * 60 * 1000);   // 每 5 分钟主动复检（过期/断连及时提醒）
+
+// ---------- 问答（流式：多问题逐题完成逐题输出） ----------
+function scopePayload() {
+  const mode = document.querySelector('input[name=scope]:checked').value;
+  if (mode === 'docs') return { doc_keys: [...selDocs] };
+  if (mode === 'libs') {
+    const v = $('#scope-lib').value;
+    return v ? { library_ids: [v] } : {};
+  }
+  return {};
+}
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+// WS-G 防呆：即使服务端未剥离（旧进程），客户端兜底隐藏原子编码/证据包装标记
+function stripIds(s) {
+  return String(s ?? '')
+    .replace(/\s*\[chunk\s+[0-9a-fA-F]+[^\]]*\]/g, '')
+    .replace(/\s*\[[0-9a-fA-F]{6,}(?:-[0-9a-fA-F]{2,})+\]/g, '')
+    .replace(/\s*\[[0-9a-fA-F]{6,64}\]/g, '');
+}
+function statusTag(st) {
+  return st === 'answered' ? '<span class="tag ok">已回答</span>'
+    : st === 'pending_review' ? '<span class="tag pend">待人工复核</span>'
+    : st === 'partial' ? '<span class="tag pend">部分回答</span>'
+    : '<span class="tag bad">拒答</span>';
+}
+// 引用 display/ref 分层（WS-G）：兼容新旧两种形态
+function citeOf(c) {
+  return c && c.display ? { ...c.display, chunk_id: (c.ref || {}).chunk_id } : c;
+}
+// 公式数学形态渲染（KaTeX）：失败回退代码；原始 LaTeX 折叠保留
+function mathHtml(latex) {
+  if (!latex) return '<div class="hint">公式原文见附图</div>';
+  return `<div class="math-src" data-latex="${escapeHtml(latex)}"></div>
+    <details class="hint"><summary>原始 LaTeX</summary>
+      <pre class="mono math-fallback" style="white-space:pre-wrap">${escapeHtml(latex)}</pre></details>`;
+}
+function renderAllMath(root) {
+  if (typeof katex === 'undefined') return;   // CDN 未加载 → 保留折叠代码
+  (root || document).querySelectorAll('.math-src[data-latex]').forEach(el => {
+    if (el.dataset.rendered) return;
+    el.dataset.rendered = '1';
+    try {
+      katex.render(el.dataset.latex, el,
+        { throwOnError: false, strict: false, displayMode: true, errorColor: '#5c6b7f' });
+    } catch (e) {
+      el.innerHTML = `<pre class="math-fallback">${escapeHtml(el.dataset.latex)}</pre>`;
+    }
+  });
+}
+window.addEventListener('load', () => setTimeout(renderAllMath, 300));  // KaTeX defer 加载后补渲染
+
+// 章节标签取词：breadcrumb 尾段会被段首文本污染（"…第十三条 燃煤基准电价的1.5 倍"）
+// ——只取条款形段（第X条/章节款项），标签才是"第十三条"而非"倍"
+function clauseSegs(path) {
+  return String(path || '').split(' ').filter(p =>
+    /^第[0-9０-９一二三四五六七八九十百千零〇]+[章节条款项]/.test(p));
+}
+function clauseLabel(path, fallback) {
+  const segs = clauseSegs(path);
+  return segs.length ? segs[segs.length - 1] : String(fallback || '引用').slice(0, 8);
+}
+function clauseHead(path) {
+  const segs = clauseSegs(path);
+  return segs.length ? segs.join(' ') : String(path || '');
+}
+function citationsHtml(env) {
+  // 公式/图表已在专用面板给转写+附图——其引文行与纯 LaTeX/符号引文行不再
+  // 重复铺陈（用户决策：回答下方不带公式附图的 latex 残行删去/隐藏）
+  const richIds = new Set([...(env.formulas || []).map(f => f.chunk_id),
+                           ...(env.charts || []).map(c => c.chunk_id)]);
+  const isTex = s => /\\(sum|left|right|times|Bigl?|begin|end)|[_^]\{|【符号】|【公式】|【LaTeX】/.test(String(s || ''))
+    || /^\s*式中[：:]/.test(String(s || ''));
+  return (env.citations || []).filter(c0 => {
+    const c = citeOf(c0);
+    return !richIds.has(c.chunk_id) && !isTex(c.quote);
+  }).map(c0 => {
+    const c = citeOf(c0);
+    return `
+    <div class="cite"><b>[${escapeHtml(clauseHead(c.clause_path))}]</b> ${escapeHtml(c.doc_title || '')} @${escapeHtml(c.doc_version || '')}
+      ${c.verified ? '<span class="tag ok">已校验</span>' : '<span class="tag bad">未校验</span>'}
+      <br>“${escapeHtml(c.quote || '')}”</div>`;
+  }).join('')
+    + (env.formulas || []).map(f => `
+    <div class="cite" data-fcid="${escapeHtml(f.chunk_id || '')}"><b>公式</b>
+      ${f.page ? `<span class="tag ok">第${escapeHtml(f.page)}页</span>` : ''}
+      ${f.pending ? '<span class="tag pend">转写中</span>'
+        : (f.confidence ? `<span class="tag ${f.confidence === 'high' ? 'ok' : 'pend'}">${escapeHtml(f.confidence)}</span>` : '')}
+      ${mathHtml(f.latex)}
+      ${f.image ? `<img src="/v1/chunks/${f.chunk_id}/image" style="max-width:100%;border:1px solid var(--line);border-radius:6px;margin-top:6px">` : ''}
+    </div>`).join('')
+    + (env.charts || []).map(ch => `
+    <div class="cite"><b>图表</b>
+      ${ch.page ? `<span class="tag ok">第${escapeHtml(ch.page)}页</span>` : ''}
+      ${escapeHtml(ch.title)} <span class="tag pend">${escapeHtml(ch.chart_type || '图')}</span>
+      ${ch.image ? `<img src="/v1/chunks/${ch.chunk_id}/image" style="max-width:100%;border:1px solid var(--line);border-radius:6px;margin-top:6px">` : ''}
+    </div>`).join('');
+}
+// 悬浮标签右列：章节名为主，hover 完整信息，click 跳原文阅读
+function tagsHtml(env, lineRefs) {
+  const cites = (env.citations || []).map(citeOf);
+  let refs = lineRefs;
+  // 兜底：服务端未给 line_refs（旧进程）→ 从原文编码标记自行解析对位
+  if ((!refs || !refs.length) && /\[[0-9a-fA-F]{6,64}\]/.test(env.answer || '')) {
+    const idToIdx = {};
+    cites.forEach((c, i) => { if (c.chunk_id) idToIdx[c.chunk_id] = i; });
+    refs = [];
+    String(env.answer || '').split(/(?<=[。！？!?；;])/).forEach((s, i) => {
+      const ids = [...String(s).matchAll(/\[([0-9a-fA-F]{6,64})\]/g)].map(m => m[1]);
+      const idxs = ids.map(id => idToIdx[id]).filter(x => x !== undefined);
+      if (idxs.length) refs.push({ sentence_no: i, cite_indexes: [...new Set(idxs)] });
+    });
+  }
+  const used = new Map();   // cite index -> tag html（同引用只出一个标签）
+  (refs || []).forEach(lr => (lr.cite_indexes || []).forEach(i => {
+    if (used.has(i) || !cites[i]) return;
+    const c = cites[i];
+    const label = clauseLabel(c.clause_path, c.doc_title);
+    const info = `${c.doc_title || ''}@${c.doc_version || ''} · 第${c.page || '?'}页 · “${(c.quote || '').slice(0, 40)}”`;
+    used.set(i, `<span class="ref-tag" data-cid="${escapeHtml(c.chunk_id || '')}"
+      title="${escapeHtml(info)}" onclick="jumpReader('${escapeHtml(c.chunk_id || '')}')">${escapeHtml(label)}</span>`);
+  }));
+  // 未被行内引用绑定的（如多句共引），也归入右列
+  cites.forEach((c, i) => {
+    if (!used.has(i)) {
+      const label = clauseLabel(c.clause_path, c.doc_title);
+      used.set(i, `<span class="ref-tag" data-cid="${escapeHtml(c.chunk_id || '')}"
+        title="${escapeHtml((c.doc_title || '') + ' · 第' + (c.page || '?') + '页')}"
+        onclick="jumpReader('${escapeHtml(c.chunk_id || '')}')">${escapeHtml(label)}</span>`);
+    }
+  });
+  return [...used.values()].join('');
+}
+function renderAnswer(env) {
+  $('#r-status').innerHTML = statusTag(env.status);
+  $('#r-answer-row').style.display = 'flex';
+  $('#r-answer').textContent =
+    stripIds(env.answer) || (env.refusal ? `拒答原因：${env.refusal.detail}` : '');
+  $('#r-tags').innerHTML = tagsHtml(env, env.line_refs);
+  $('#r-cites').innerHTML = citationsHtml(env);
+  renderAllMath($('#r-cites'));
+  $('#r-synth').innerHTML = synthHtml(env.synthesis);
+  $('#r-meta').textContent =
+    `置信度 ${env.confidence} · as_of ${env.as_of} · trace ${env.trace_id}` +
+    (env.review_task_id ? ` · 复核任务 ${env.review_task_id}` : '') +
+    (env.verification?.failures?.length ? ` · 校验备注: ${env.verification.failures.join('；')}` : '');
+  renderRichJobs(env.rich_jobs || [], env);
+}
+function synthHtml(syn, liveText) {
+  if (liveText) {
+    return `<div class="cite" style="border-left-color:var(--warn)">
+      <b>分析推理</b> <span class="tag pend">生成中…</span>
+      <div class="q-body" style="margin-top:6px;white-space:pre-wrap">${escapeHtml(liveText)}</div></div>`;
+  }
+  if (!syn) return '';
+  const st = syn.status === 'ok' ? '<span class="tag ok">已完成</span>'
+    : syn.status === 'partial' ? '<span class="tag pend">部分通过校验</span>'
+    : '<span class="tag bad">未通过校验已省略</span>';
+  return `<div class="cite" style="border-left-color:var(--warn)">
+    <b>分析推理（文档锚定）</b> ${st}
+    <div class="q-body" style="margin-top:6px;white-space:pre-wrap">${escapeHtml(syn.text || '')}</div>
+    ${(syn.verification && syn.verification.failures || []).length
+      ? `<div class="hint">校验备注：${escapeHtml(syn.verification.failures.slice(0, 3).join('；'))}</div>` : ''}
+  </div>`;
+}
+
+const streamState = { total: 0, multi: false, doneCount: 0, synths: {}, citeChunks: new Set(), evChunks: new Set() };
+function resetResult() {
+  $('#result-card').style.display = 'block';
+  $('#plan-card').style.display = 'none';
+  $('#stream-cards').innerHTML = '';
+  $('#r-answer-row').style.display = 'flex';
+  $('#r-answer').textContent = '推理中…（含引用校验与数字保真硬闸）';
+  $('#r-tags').innerHTML = '';
+  $('#r-cites').innerHTML = '';
+  $('#r-synth').innerHTML = '';
+  $('#r-meta').textContent = '';
+  $('#rich-progress').innerHTML = '';
+  $('#r-status').innerHTML = '<span class="tag pend">推理中</span>';
+  streamState.total = 0; streamState.multi = false; streamState.doneCount = 0;
+  streamState.synths = {}; streamState.citeChunks = new Set(); streamState.evChunks = new Set();
+  window._richShown = new Set();   // 扫描完成块去重随提问重置（曾跨提问残留致不显示）
+}
+function onStreamEvent(ev) {
+  const st = streamState;
+  if (ev.type === 'plan') {
+    st.total = ev.total; st.multi = ev.total > 1; st.doneCount = 0;
+    if (st.multi) {
+      $('#r-answer-row').style.display = 'none';
+      $('#r-status').innerHTML = `<span class="tag pend">共 ${ev.total} 项 · 逐项输出中</span>`;
+    }
+  } else if (ev.type === 'q_start') {
+    const div = document.createElement('div');
+    div.className = 'q-card';
+    div.id = `qcard-${ev.index}`;
+    div.innerHTML = `<div class="q-head"><b>${ev.qid ? '项 ' + escapeHtml(ev.qid) : '问题 ' + ev.index + '/' + ev.total}</b>
+      ${escapeHtml(ev.question)}
+      <span class="tag pend" id="qstat-${ev.index}">检索推理中…</span></div>
+      <div class="ans-row"><div class="q-body ans-text" id="qbody-${ev.index}"><span class="hint">检索推理中…（含引用校验与数字保真硬闸）</span></div>
+      <div class="ans-tags" id="qtags-${ev.index}"></div></div>
+      <div class="q-cites" id="qcites-${ev.index}"></div>`;
+    $('#stream-cards').appendChild(div);
+    if (!st.multi) $('#r-answer-row').style.display = 'none';
+  } else if (ev.type === 'phase') {
+    const names = { rewrite: '查询重写', plan_apply: '应用已确认方案', recall: '混合检索',
+      sufficiency: '证据充分性', draft: '生成草稿', verify: '校验硬闸',
+      guard_redraft: '守卫重写', numeric_redraft: '数值补答重写', review: '对抗审查' };
+    const b = $(`#qbody-${ev.index}`) || $('#r-answer');
+    if (b && b.textContent.length < 200) b.textContent = (names[ev.phase] || ev.phase) + '…';
+  } else if (ev.type === 'draft_delta') {
+    const txt = stripIds(ev.text || '');   // 草稿即刻隐藏编码（JSON 流带原生标记）
+    if (!txt) return;
+    const b = $(`#qbody-${ev.index}`) || $('#r-answer');
+    if (b) b.textContent = txt;
+  } else if (ev.type === 'q_done') {
+    markLlmOk();   // LLM 实际出答案 = 连接已恢复 → 异常横幅自动收起
+    try {
+      const env = ev.envelope;
+      st.doneCount++;
+      (env.citations || []).forEach(c => {
+        const cid = citeOf(c).chunk_id;
+        if (cid) st.citeChunks.add(cid);
+      });
+      ((env.meta || {}).evidence_ids || []).forEach(id => st.evChunks.add(id));
+      // 状态标签随回答状态即时更新（此前偶发残留"检索推理中"）
+      const tag = $(`#qstat-${ev.index}`);
+      if (tag) tag.outerHTML = statusTag(env.status);
+      const body = $(`#qbody-${ev.index}`);
+      if (body) body.textContent = stripIds(env.answer) ||
+        (env.refusal ? `拒答原因：${env.refusal.detail}` : '');
+      // 标签列 / 引用块独立容错——一处渲染失败不吞掉其余展示
+      try {
+        const tags = $(`#qtags-${ev.index}`);
+        if (tags) tags.innerHTML = tagsHtml(env, env.line_refs);
+      } catch (e2) { console.error('标签列渲染失败', e2); }
+      try {
+        const cites = $(`#qcites-${ev.index}`);
+        if (cites) {
+          cites.innerHTML = citationsHtml(env) +
+            `<div class="hint">置信度 ${env.confidence} · trace ${escapeHtml(env.trace_id)}` +
+            (env.review_task_id ? ` · 复核任务 ${escapeHtml(env.review_task_id)}` : '') + '</div>';
+          renderAllMath(cites);
+        }
+      } catch (e2) { console.error('引用块渲染失败', e2); }
+      $('#r-status').innerHTML = `<span class="tag pend">已完成 ${st.doneCount}/${st.total}</span>`;
+    } catch (e) {
+      console.error('q_done 渲染失败', e);
+      const tag = $(`#qstat-${ev.index}`);
+      if (tag) tag.outerHTML = statusTag((ev.envelope || {}).status || 'answered');
+    }
+  } else if (ev.type === 'synthesis_start') {
+    $('#r-synth').innerHTML = synthHtml(null, '检索答案已齐，正在文档锚定推导…');
+  } else if (ev.type === 'synthesis_delta') {
+    st.synths[ev.qid || 0] = (st.synths[ev.qid || 0] || '') + (ev.text || '');
+    $('#r-synth').innerHTML = synthHtml(null, st.synths[ev.qid || 0]);
+  } else if (ev.type === 'synthesis_done') {
+    $('#r-synth').innerHTML = synthHtml(ev.synthesis);
+  } else if (ev.type === 'done') {
+    const env = ev.envelope;
+    // 清扫残留的"检索推理中"状态标签（q_done 渲染异常时的兜底）
+    document.querySelectorAll('#stream-cards .tag').forEach(el => {
+      if (el.textContent.includes('检索推理中')) el.outerHTML = statusTag(env.status);
+    });
+    document.querySelectorAll('#stream-cards .q-body').forEach(el => {
+      if (el.textContent.includes('检索推理中')) {
+        el.textContent = stripIds(env.answer) ||
+          (env.refusal ? `拒答原因：${env.refusal.detail}` : '');
+      }
+    });
+    // 无卡片（异常路径）→ 回退经典渲染
+    if (!$('#stream-cards').children.length) renderAnswer(env);
+    $('#r-status').innerHTML = env.status === 'partial'
+      ? `<span class="tag pend">部分回答（${env.meta?.n_answered ?? '?'}/${env.meta?.n_questions ?? '?'}）</span>`
+      : statusTag(env.status);
+    if (env.synthesis && $('#r-synth').innerHTML.includes('生成中')) {
+      $('#r-synth').innerHTML = synthHtml(env.synthesis);
+    }
+    $('#r-meta').textContent =
+      `置信度 ${env.confidence} · as_of ${env.as_of} · trace ${env.trace_id}` +
+      (env.review_task_id ? ` · 复核任务 ${env.review_task_id}` : '') +
+      (env.verification?.failures?.length ? ` · 校验备注: ${env.verification.failures.join('；')}` : '');
+    renderRichJobs(env.rich_jobs || [], env);
+    syncReaderFromResult(env);   // 同步原文阅读：加载被引文档并高亮检索返回条款
+  } else if (ev.type === 'error') {
+    toast('出错: ' + ev.message);
+    $('#r-status').innerHTML = '<span class="tag bad">出错</span>';
+  }
+}
+async function askStream(body, endpoint) {
+  const resp = await fetch(endpoint || '/v1/query/stream', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok || !resp.body) throw new Error('HTTP ' + resp.status);
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf('\n\n')) >= 0) {
+      const frame = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      for (const line of frame.split('\n')) {
+        if (!line.startsWith('data: ')) continue;
+        try { onStreamEvent(JSON.parse(line.slice(6))); } catch (e) { /* skip */ }
+      }
+    }
+  }
+}
+
+// ---------- 检索方案闸门（WS-B：智能触发，默认开） ----------
+let currentPlan = null;
+function askBody() {
+  return {
+    query: $('#q').value.trim(), as_of: $('#as_of').value.trim(), mode: $('#mode').value,
+    filters: scopePayload(), require_review: $('#need-review').checked,
+  };
+}
+function renderPlan(p) {
+  currentPlan = p.plan;
+  const items = p.plan.items || [];
+  const nR = items.filter(i => i.kind === 'retrieve').length;
+  const nS = items.filter(i => i.kind === 'reason').length;
+  $('#plan-summary').textContent =
+    `${nR} 项检索 + ${nS} 项分析推理${p.plan.degraded ? '（方案降级，将直接执行）' : ''}`;
+  $('#plan-items').innerHTML = items.filter(i => i.kind !== 'reason').map(it => `
+    <div class="plan-item retrieve">
+      <label><input type="checkbox" class="plan-ck" data-qid="${escapeHtml(it.qid)}" ${it.selected ? 'checked' : ''}>
+        <b>${escapeHtml(it.qid)}.</b> ${escapeHtml(it.question)}</label>
+      <div class="plan-meta">意图 ${escapeHtml(it.intent)} · ${escapeHtml(it.specificity === 'broad' ? '宽泛（扩大证据预算）' : '精准')}
+        ${it.clause_refs.length ? ' · 条款 ' + escapeHtml(it.clause_refs.join('、')) : ''}
+        ${it.terms.length ? ' · 术语 ' + escapeHtml(it.terms.slice(0, 4).join('、')) : ''}
+        ${it.numeric_anchors.length ? ' · 数值 ' + escapeHtml(it.numeric_anchors.join('、')) : ''}</div>
+      ${(it.variants || []).map((v, vi) => `
+        <label class="variant"><input type="checkbox" class="var-ck" data-qid="${escapeHtml(it.qid)}" data-vi="${vi}"
+          ${(it.variants_selected || []).includes(vi) ? 'checked' : ''}>
+          <span class="conf-badge">${Math.round(v.confidence * 100)}%</span>
+          扩展：${escapeHtml(v.query)} <span class="hint">(${escapeHtml(v.basis || '联想')})</span></label>`).join('')}
+    </div>`).join('');
+  $('#plan-reason').innerHTML = items.filter(i => i.kind === 'reason').map(it => `
+    <div class="plan-item reason">
+      <label><input type="checkbox" class="plan-ck" data-qid="${escapeHtml(it.qid)}" ${it.selected ? 'checked' : ''}>
+        <b>${escapeHtml(it.qid)}.</b> ${escapeHtml(it.question)}</label>
+      <div class="plan-meta">分析推理 · 依据 ${escapeHtml((it.depends_on || []).join('、') || '（隐式事实）')}
+        ${(it.implicit_facts || []).length ? ' · 将先核实 ' + it.implicit_facts.length + ' 项事实' : ''}</div>
+    </div>`).join('') || '<div class="hint">（无分析推理要求）</div>';
+  $('#plan-clarify').innerHTML = (p.plan.clarifications || []).length
+    ? '💡 澄清提示：' + escapeHtml(p.plan.clarifications.join('；')) : '';
+  $('#plan-card').style.display = 'block';
+  $('#result-card').style.display = 'none';
+}
+function collectPlan() {
+  const plan = JSON.parse(JSON.stringify(currentPlan));
+  (plan.items || []).forEach(it => {
+    const ck = document.querySelector(`.plan-ck[data-qid="${it.qid}"]`);
+    it.selected = ck ? ck.checked : true;
+    it.variants_selected = [...document.querySelectorAll(
+      `.var-ck[data-qid="${it.qid}"]:checked`)].map(x => +x.dataset.vi);
+  });
+  return plan;
+}
+$('#btn-plan-run').onclick = () => withBusy($('#btn-plan-run'), () => executePlan(collectPlan()));
+$('#btn-plan-all').onclick = () => withBusy($('#btn-plan-all'), () => {
+  const plan = collectPlan();
+  plan.items.forEach(it => { it.selected = true; });
+  return executePlan(plan);
+});
+$('#btn-plan-cancel').onclick = () => {
+  $('#plan-card').style.display = 'none';
+  $('#r-status').innerHTML = '<span class="tag pend">已取消</span>';
+};
+async function executePlan(plan) {
+  resetResult();
+  $('#r-status').innerHTML = '<span class="tag pend">方案已确认 · 执行中</span>';
+  const body = { ...askBody(), plan };
+  try {
+    await askStream(body, '/v1/query/execute');
+  } catch (e) {
+    $('#r-answer').textContent = '执行失败: ' + e.message;
+  }
+}
+$('#plan-gate').checked = localStorage.getItem('plan_gate') !== '0';
+$('#plan-gate').onchange = e => localStorage.setItem('plan_gate', e.target.checked ? '1' : '0');
+
+$('#btn-ask').onclick = () => withBusy($('#btn-ask'), async () => {
+  try {
+    const q = $('#q').value.trim();
+    if (!q) return toast('请输入问题');
+    resetResult();
+    $('#r-answer').textContent = '生成检索方案…';
+    let p;
+    try {
+      p = await api('/v1/plan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(askBody()),
+      });
+    } catch (e) {
+      // 方案生成失败 → 直接执行（plan_fallback 语义）
+      toast('方案生成失败，已降级直接执行');
+      await askStream(askBody());
+      return;
+    }
+    if ($('#plan-gate').checked && p.need_confirm) {
+      renderPlan(p);
+    } else {
+      resetResult();
+      await askStream({ ...askBody(), plan: p.plan }, '/v1/query/execute');
+    }
+  } catch (e) { $('#r-answer').textContent = '请求失败: ' + e.message; }
+});
+$('#btn-search-only').onclick = () => withBusy($('#btn-search-only'), async () => {
+  try {
+    const q = $('#q').value.trim();
+    if (!q) return toast('请输入问题');
+    const body = { query: q, k: 10, ...scopePayload() };
+    const hits = await api('/v1/search_s', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    renderHits(hits, '#hits-table');
+    $('#hits-card').style.display = 'block';
+  } catch (e) { toast('检索失败: ' + e.message); }
+});
+function renderRichJobs(jobs, env) {
+  const box = $('#rich-progress');
+  if (!jobs.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `
+    <div class="cite" style="border-left-color:#9a6700">
+      <b>⏳ ${env.answer ? '答案' : '引用'}含公式图表，需 1-2 分钟单独扫描</b>
+      <div style="background:#eef2f7;border-radius:8px;height:14px;margin:8px 0;overflow:hidden">
+        <div id="rich-bar" style="background:#1f6feb;height:100%;width:0%;transition:width .5s"></div>
+      </div>
+      <div class="hint" id="rich-note">正在扫描转换中…（完成后此处自动更新）</div>
+    </div>`;
+  const poll = async () => {
+    let allDone = true, acc = 0;
+    for (const j of jobs) {
+      try {
+        const st = await api('/v1/rich/jobs/' + j.job_id);
+        acc += st.progress || 0;
+        if (st.status !== 'done' && st.status !== 'failed') allDone = false;
+        else if (st.status === 'done' && j.kind === 'formula') {
+          // 转换完成后把最新公式内容补进展示（标注页码；原子编码不进展示）
+          window._richShown = window._richShown || new Set();
+          for (const cid of (j.chunk_ids || [])) {
+            if (window._richShown.has(cid)) continue;
+            if (document.querySelector(`[data-fcid="${CSS.escape(cid)}"]`)) {
+              window._richShown.add(cid);   // 引用区已展示同块 → 不重复追加
+              continue;
+            }
+            try {
+              const ch = await api('/v1/chunks/' + cid);
+              if (ch.kind === 'formula' && ch.meta && ch.meta.latex) {
+                window._richShown.add(cid);
+                $('#r-cites').insertAdjacentHTML('beforeend', `
+                  <div class="cite" data-fcid="${escapeHtml(cid)}"><b>公式（扫描完成）</b>
+                  ${ch.page ? `<span class="tag ok">第${escapeHtml(ch.page)}页</span>` : ''}
+                  ${mathHtml(String(ch.meta.latex || ''))}
+                  ${ch.meta.image ? `<img src="/v1/chunks/${cid}/image" style="max-width:100%;border:1px solid var(--line);border-radius:6px">` : ''}</div>`);
+                renderAllMath($('#r-cites'));
+              }
+            } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (e) { allDone = false; }
+    }
+    const pct = Math.min(100, Math.round(acc / jobs.length * 100));
+    const bar = $('#rich-bar'); if (bar) bar.style.width = pct + '%';
+    if (!allDone) setTimeout(poll, 4000);
+    else {
+      const note = $('#rich-note');
+      if (note) note.textContent = '扫描完成，公式/图表已更新 ✓';
+      // 扫描完成后进度条消失（内容已入引用区/公式块，不再占位）
+      setTimeout(() => { const box = $('#rich-progress'); if (box) box.innerHTML = ''; }, 2500);
+    }
+  };
+  setTimeout(poll, 2500);
+}
+function renderHits(hits, tableSel) {
+  const t = $(tableSel);
+  t.innerHTML = '<tr><th>文档</th><th>条款</th><th>片段</th><th>分数</th></tr>' +
+    hits.map(h => `<tr>
+      <td>${h.doc_title}</td><td>${h.clause_path}</td>
+      <td>${h.snippet.slice(0, 60)}</td><td>${(h.score ?? 0).toFixed(4)}</td></tr>`).join('');
+}
+
+// ---------- 文档管理（WS-E/F：按身份组聚合；版本折叠；归档入口） ----------
+function verLabel(v) {
+  // "undated" 等无意义标签 → 人读形态
+  return v === 'undated' ? '未标注日期' : v;
+}
+async function loadDocs() {
+  const docs = await api('/v1/documents');
+  window._docsCache = docs;
+  // 按 doc_group 聚合 + 按库即时过滤
+  const filterLib = $('#lib-filter').value;
+  const groups = new Map();
+  docs.forEach(d => {
+    if (filterLib) {
+      const libs = d.libraries || [];
+      if (filterLib === '__none__' ? libs.length : !libs.includes(filterLib)) return;
+    }
+    const g = d.doc_group || d.doc_id;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(d);
+  });
+  const t = $('#docs-table');
+  t.innerHTML = '<tr><th></th><th>标题</th><th>库</th><th>版本</th><th>最新生效日期</th><th>状态</th><th>块数</th><th>操作</th></tr>' +
+    [...groups.entries()].map(([g, rows]) => {
+      rows.sort((a, b) => (a.version_seq || 0) - (b.version_seq || 0));
+      const latest = rows.find(r => r.is_latest) || rows[rows.length - 1];
+      const libs = (latest.libraries || []).map(x =>
+        `<span class="tag pend">${escapeHtml(x)}</span>`).join(' ') || '<span class="hint">未分类</span>';
+      const verCell = rows.length > 1
+        ? `<a href="#" onclick="toggleVers('${escapeHtml(g)}');return false">${rows.length} 个版本 ⌄</a>`
+        : escapeHtml(verLabel(latest.version));
+      // 版本子行默认折叠（此前以"└日期"裸露展示，被误认成独立文档）
+      const vers = rows.map(r => `
+        <tr class="ver-row ver-${escapeHtml(g)}" style="display:none">
+          <td><input type="checkbox" class="doc-ck" data-key="${escapeHtml(r.doc_key)}"
+            ${selDocs.has(r.doc_key) ? 'checked' : ''}></td>
+          <td class="hint">版本 ${escapeHtml(verLabel(r.version))}${r.is_latest ? ' <span class="tag ok">最新</span>' : ''}</td>
+          <td></td><td class="mono">${escapeHtml(verLabel(r.version))}</td>
+          <td>${r.effective_date || '—'}</td>
+          <td>${r.status === 'active' ? '<span class="tag ok">有效</span>' : `<span class="tag pend">${escapeHtml(r.status)}</span>`}</td>
+          <td>${r.n_chunks ?? ''}</td>
+          <td><button class="ghost" onclick="openReader('${escapeHtml(r.doc_key)}')">阅读</button></td></tr>`).join('');
+      return `<tr>
+        <td><input type="checkbox" class="doc-ck" data-key="${escapeHtml(latest.doc_key)}"
+          ${selDocs.has(latest.doc_key) ? 'checked' : ''}></td>
+        <td><b>${escapeHtml(latest.title)}</b></td>
+        <td>${libs}</td>
+        <td>${verCell}</td>
+        <td>${latest.effective_date || '—'}</td>
+        <td>${latest.status === 'active' ? '<span class="tag ok">有效</span>' : `<span class="tag pend">${escapeHtml(latest.status)}</span>`}</td>
+        <td>${rows.reduce((s, r) => s + (r.n_chunks || 0), 0)}</td>
+        <td><button class="ghost" onclick="openReader('${escapeHtml(latest.doc_key)}')">阅读</button></td></tr>` + vers;
+    }).join('');
+  t.querySelectorAll('.doc-ck').forEach(ck => ck.onchange = () => {
+    ck.checked ? selDocs.add(ck.dataset.key) : selDocs.delete(ck.dataset.key);
+    updateScopeCount();
+  });
+  $('#docs-count').textContent = `共 ${groups.size} 组 / ${docs.length} 个版本`;
+  loadLibraries();
+}
+function toggleVers(g) {
+  document.querySelectorAll('.ver-' + CSS.escape(g)).forEach(r => {
+    r.style.display = r.style.display === 'none' ? '' : 'none';
+  });
+}
+// 归档命名入口：勾选 → 输入名称 → 一键归档（同名库复用/自动建库）
+$('#btn-archive-sel').onclick = () => withBusy($('#btn-archive-sel'), async () => {
+  const name = $('#lib-name').value.trim();
+  if (!name) return toast('请先输入归档名称');
+  if (!selDocs.size) return toast('请先勾选文档');
+  const r = await api('/v1/libraries/assign', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ library_name: name, doc_keys: [...selDocs] }),
+  });
+  toast(`已归档 ${r.n_docs} 份文档 →「${name}」`);
+  loadDocs();
+});
+// AI 自动归档：按标题+主要内容分库
+$('#btn-ai-archive').onclick = () => withBusy($('#btn-ai-archive'), async () => {
+  const scope = $('#ai-scope').value;
+  const body = scope === 'selected'
+    ? { doc_keys: [...selDocs] } : { scope };
+  if (scope === 'selected' && !selDocs.size) return toast('请先勾选文档');
+  $('#docs-count').textContent = 'AI 归档中…（按标题与主要内容分析）';
+  try {
+    const r = await api('/v1/libraries/auto_archive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    toast(`AI 归档完成：${r.assigned} 份文档` +
+      (r.libraries_created?.length ? `，新建库「${r.libraries_created.join('、')}」` : ''));
+    loadDocs();
+  } catch (e) { toast('AI 归档失败: ' + e.message); loadDocs(); }
+});
+$('#lib-filter').onchange = () => loadDocs();   // 选定即过滤，无需按钮
+// ---------- 分库 ----------
+let _libs = [];
+async function loadLibraries() {
+  try {
+    _libs = await api('/v1/libraries');
+    $('#scope-lib').innerHTML = '<option value="">（选择库）</option>' +
+      _libs.map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.name)}（${l.n_docs}）</option>`).join('');
+    // 库筛选下拉：选定即过滤
+    const cur = $('#lib-filter').value;
+    $('#lib-filter').innerHTML = '<option value="">全部</option>' +
+      '<option value="__none__">未分类</option>' +
+      _libs.map(l => `<option value="${escapeHtml(l.name)}">${escapeHtml(l.name)}（${l.n_docs}）</option>`).join('');
+    $('#lib-filter').value = cur && [...$('#lib-filter').options].some(o => o.value === cur) ? cur : '';
+  } catch (e) { _libs = []; }
+}
+function libNameOf(docKey) {
+  return (window._docLibs && window._docLibs[docKey]) || '未分类';
+}
+
+// ---------- 原文阅读（原 PDF 视图 + 树绑定来源页） ----------
+// 阅读正文即原 PDF（抽取文本不再展示——研报版面/图表/表格按原样呈现）；
+// 树节点绑定来源物理页区间 [page, page_end]，点树/点引用直达对应页；PDF 内不做高亮。
+const readerState = { citeChunks: new Set(), evChunks: new Set(), doc: null, page: 1, tree: [] };
+function openReader(docKey) {
+  switchTab('reader');
+  readerState.doc = docKey;
+  loadReader(true);
+}
+// 引用标签跳转：解析目标块 → 来源物理页 → PDF 对应页
+async function jumpReader(chunkId) {
+  if (!chunkId) return;
+  switchTab('reader');
+  let ch;
+  try { ch = await api('/v1/chunks/' + encodeURIComponent(chunkId)); }
+  catch (e) { return toast('未找到目标分块'); }
+  if (!ch || !ch.doc_key) return toast('未找到目标分块');
+  if (readerState.doc !== ch.doc_key) {
+    readerState.doc = ch.doc_key;
+    await loadReader(false);
+  }
+  loadPdf(ch.page || 1);
+}
+// 树点选：直达节点来源页（章/节取区间起始页）
+function jumpTree(idx) {
+  const n = readerState.tree[idx];
+  if (!n || !n.page) return;
+  loadPdf(n.page);
+}
+function loadPdf(page) {
+  readerState.page = page || 1;
+  const el = $('#reader-page'); if (el) el.value = readerState.page;
+  const doc = readerState.doc;
+  if (!doc) return;
+  // ts 强制重载查看器（只改 #page 不触发跳转是浏览器 PDF 查看器的已知行为）
+  $('#reader-pdf').src =
+    `/v1/documents/${encodeURIComponent(doc)}/pdf?ts=${Date.now()}#page=${readerState.page}`;
+  renderTree();
+}
+async function loadReader(reset) {
+  const sel = $('#reader-doc');
+  if (!sel.options.length) {
+    const docs = window._docsCache || await api('/v1/documents');
+    sel.innerHTML = docs.map(d =>
+      `<option value="${escapeHtml(d.doc_key)}">${escapeHtml(d.title)} @${escapeHtml(d.version)}</option>`).join('');
+  }
+  const docKey = readerState.doc || sel.value;
+  if (!docKey) return;
+  readerState.doc = docKey;
+  sel.value = docKey;
+  // 树一次取全（blocks 只取 1 个凑响应——正文即原 PDF，不再展示抽取文本）
+  const data = await api(`/v1/documents/${encodeURIComponent(docKey)}/fulltext?offset=0&limit=1`);
+  if (data.error) { $('#reader-info').textContent = data.error; return; }
+  $('#reader-info').textContent =
+    `${data.title} · ${data.is_latest ? '最新版' : '历史版本'} · 树已绑定来源页`;
+  readerState.tree = data.tree || [];
+  renderTree();
+  if (reset) loadPdf(readerState.page || 1);
+}
+function renderTree() {
+  $('#reader-tree').innerHTML = readerState.tree.map((n, i) => {
+    const cls = (treeHitCls(n) + ' ' + (inCurPage(n) ? 'cur-page' : '')).trim();
+    const pe = n.page_end && n.page_end !== n.page ? '-' + n.page_end : '';
+    return `<div class="tree-node${cls ? ' ' + cls : ''}" style="padding-left:${(n.level - 1) * 14 + 6}px"
+      onclick="jumpTree(${i})" title="第${n.page || '?'}${pe}页">${escapeHtml(n.label)}</div>`;
+  }).join('');
+}
+function inCurPage(n) {
+  const p = readerState.page, a = n.page || 0, b = n.page_end || n.page || 0;
+  return !!(a && p >= a && p <= b);
+}
+// 树高亮：被引（蓝）/证据（黄）按叶节点；当前页按来源页区间（cur-page）
+function treeHitCls(n) {
+  if (!n.chunk_id) return '';
+  return readerState.citeChunks.has(n.chunk_id) ? 'cite-hit'
+    : readerState.evChunks.has(n.chunk_id) ? 'ev-hit' : '';
+}
+// 查询完成 → 阅读器同步：树上被引/证据高亮 + 预载首个被引来源页（PDF）
+async function syncReaderFromResult(env) {
+  const citeIds = new Set(), evIds = new Set();
+  const collect = (e) => {
+    (e.citations || []).forEach(c => { const id = citeOf(c).chunk_id; if (id) citeIds.add(id); });
+    ((e.meta || {}).evidence_ids || []).forEach(id => evIds.add(id));
+  };
+  collect(env);
+  (env.meta?.per_question || []).forEach(collect);
+  citeIds.forEach(id => evIds.delete(id));   // 引用蓝优先于证据黄
+  readerState.citeChunks = citeIds;
+  readerState.evChunks = evIds;
+  const first = [...citeIds][0] || [...evIds][0];
+  if (!first) return;
+  try {
+    const ch = await api('/v1/chunks/' + first);
+    if (ch && ch.doc_key) {
+      readerState.doc = ch.doc_key;
+      await loadReader(false);
+      loadPdf(ch.page || 1);
+    }
+  } catch (e) { /* 静默 */ }
+}
+$('#reader-doc').onchange = e => {
+  readerState.doc = e.target.value; readerState.page = 1; loadReader(true);
+};
+$('#reader-page').onchange = e => {
+  loadPdf(Math.max(1, parseInt(e.target.value || '1', 10) || 1));
+};
+
+// ---------- 检索历史（WS-F） ----------
+let histOffset = 0;
+async function loadHistory(delta) {
+  if (delta) histOffset = Math.max(0, histOffset + delta * 20);
+  const kind = $('#hist-kind').value, q = $('#hist-q').value.trim();
+  const data = await api(`/v1/history?limit=20&offset=${histOffset}&kind=${kind}&q=${encodeURIComponent(q)}`);
+  $('#hist-count').textContent = `共 ${data.total} 条 · 第 ${histOffset + 1}-${histOffset + (data.items || []).length} 条`;
+  $('#hist-list').innerHTML = (data.items || []).map(r => `
+    <div class="hist-item" onclick="loadHistDetail('${escapeHtml(r.request_id)}')">
+      <b>${escapeHtml((r.query_text || r.request_id || '').slice(0, 60))}</b>
+      ${statusTag(r.status)}
+      <span class="hint" style="float:right">${new Date((r.ts || 0) * 1000).toLocaleString()} · ${escapeHtml(r.trace_ref || '')}</span>
+      <div class="hint">${escapeHtml((r.answer_preview || '').slice(0, 90))}</div>
+      <div id="hist-detail-${escapeHtml(r.request_id)}"></div>
+    </div>`).join('') || '<div class="hint">暂无记录</div>';
+}
+async function loadHistDetail(rid) {
+  const box0 = $('#hist-detail-' + rid);
+  if (box0) box0.innerHTML = '<div class="hint">详情加载中…</div>';
+  const d = await api('/v1/history/' + encodeURIComponent(rid));
+  const box = $('#hist-detail-' + rid);
+  if (!box) return;
+  if (!d.detail_available) {
+    box.innerHTML = `<div class="hint">详情不可用（trace 已清理）· 状态 ${escapeHtml(d.status || '')}</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="cite" style="margin:6px 0">
+    ${d.answer ? `<div class="q-body" style="white-space:pre-wrap">${escapeHtml(d.answer)}</div>` : ''}
+    ${d.refusal ? `<div class="hint">拒答：${escapeHtml(d.refusal.detail || '')}</div>` : ''}
+    ${(d.citations || []).length ? '<div class="hint">引用 ' + d.citations.length + ' 条：' +
+      d.citations.slice(0, 4).map(c => escapeHtml((c.clause_path || '').split(' ').pop() || '')).join('、') + '</div>' : ''}
+    <div class="hint mono">trace: ${escapeHtml(d.trace_ref || '')}（CLI 回放：scripts/replay.py --trace-id）</div>
+  </div>`;
+}
+
+// ---------- 富化全局倒计时 ----------
+async function refreshRichGlobal() {
+  try {
+    const jobs = await api('/v1/rich/jobs');
+    const active = jobs.filter(j => j.status === 'queued' || j.status === 'running');
+    const box = $('#rich-progress');
+    if (!active.length) return;
+    const docs = window._docsCache || [];
+    const pct = Math.round(active.reduce((s, j) => s + (j.progress || 0), 0) / active.length * 100);
+    if (!box.querySelector('.rich-bar-wrap')) {
+      box.innerHTML = `<div class="cite" style="border-left-color:#9a6700">
+        <b>⏳ 公式图表扫描中</b>
+        <div class="rich-bar-wrap" style="margin:8px 0"><div id="rich-global-bar"
+          style="background:#1f6feb;height:100%;width:${pct}%;transition:width .5s"></div></div>
+        <div class="hint" id="rich-global-note"></div></div>`;
+    }
+    const bar = $('#rich-global-bar'); if (bar) bar.style.width = pct + '%';
+    const note = $('#rich-global-note');
+    if (note) {
+      const names = [...new Set(active.map(j => {
+        const d = docs.find(x => x.doc_key === j.doc_key);
+        return d ? d.title.slice(0, 12) : (j.doc_key || '').slice(0, 12);
+      }))].slice(0, 3).join('、');
+      note.textContent = `文档 ${names || '…'} ${active[0].kind === 'formula' ? '公式' : '图表'}扫描中 · 整体进度 ${pct}% · 预计剩余 ${Math.max(1, Math.round((100 - pct) * 1.5 / 60))} 分钟（扫描中可正常提问）`;
+    }
+    setTimeout(refreshRichGlobal, 5000);
+  } catch (e) { /* 静默 */ }
+}
+$('#btn-upload').onclick = () => withBusy($('#btn-upload'), async () => {
+  const files = $('#file').files;
+  if (!files.length) return toast('请选择文件');
+  const out = [];
+  const visionDocs = [];
+  const scanDocs = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    $('#upload-result').textContent =
+      `上传处理中 [${i + 1}/${files.length}] ${f.name}…（大文档入库约需 10-60 秒，服务器不卡）`;
+    const fd = new FormData();
+    fd.append('file', f);
+    const eff = $('#eff-date').value.trim();
+    if (eff) fd.append('effective_date', eff);
+    fd.append('use_vision', '1');
+    try {
+      const r = await api('/v1/upload', { method: 'POST', body: fd });
+      // 回执文本：版本判断 + 自动开启扫描 + 大致时间 + 扫描中可提问
+      out.push(r.notice || `${f.name}: ${r.status}${r.n_chunks ? ' (' + r.n_chunks + ' 块)' : ' ' + (r.reason || '')}`);
+      if (r.needs_vision && r.doc_key) visionDocs.push(r);
+      if ((r.rich_jobs || []).length && r.doc_key) scanDocs.push({doc_key: r.doc_key, eta: r.eta_seconds || 0});
+    } catch (e) { out.push(`${f.name}: 失败 ${e.message}`); }
+  }
+  $('#upload-result').textContent = out.join('\n\n');
+  loadDocs();
+  watchUploadRich(scanDocs);
+  for (const r of visionDocs) await visionPrompt(r);
+});
+
+// 上传页扫描进度条：自动富化的第二屏——扫描中可提问，提问命中可插队优先
+async function watchUploadRich(scanDocs) {
+  const box = $('#upload-progress');
+  if (!box) return;
+  if (!scanDocs.length) { box.innerHTML = ''; return; }
+  const etaTotal = Math.max(1, scanDocs.reduce((s, d) => s + (d.eta || 0), 0));
+  async function tick() {
+    try {
+      let active = [];
+      for (const d of scanDocs) {
+        const jobs = await api('/v1/rich/jobs?doc_key=' + encodeURIComponent(d.doc_key));
+        active.push(...(jobs || []).filter(j => j.status === 'queued' || j.status === 'running'));
+      }
+      if (!active.length) {
+        box.innerHTML = '<div class="hint">✅ 公式/图表扫描完成，全部内容可检索。</div>';
+        setTimeout(() => { if (box) box.innerHTML = ''; }, 5000);
+        return;
+      }
+      const pct = Math.round(active.reduce((s, j) => s + (j.progress || 0), 0) / active.length * 100);
+      const etaLeft = Math.max(1, Math.round(etaTotal * (100 - pct) / 100 / 60));
+      box.innerHTML = `<div class="cite" style="border-left-color:#9a6700">
+        <b>⏳ 公式/图表扫描中 ${pct}%</b>
+        <div class="rich-bar-wrap" style="margin:8px 0"><div style="background:#1f6feb;height:100%;width:${pct}%;transition:width .5s"></div></div>
+        <div class="hint">预计剩余约 ${etaLeft} 分钟 · 扫描过程中也可以提问（命中正在转写的内容会优先插队处理）</div></div>`;
+      setTimeout(tick, 5000);
+    } catch (e) { setTimeout(tick, 8000); }
+  }
+  tick();
+}
+
+// 复杂图表文档：视觉 API 确认（不转写则图表数值类问题将拒答）
+async function visionPrompt(r) {
+  const v = r.vision || {};
+  const n = r.n_charts || '多个';
+  if (v.capable) {
+    const keep = confirm(
+      `《${r.title || r.doc_key}》检测到复杂图表约 ${n} 个，将调用视觉 API 转写图内数值（准确优先）。\n\n` +
+      `选「确定」= 使用视觉 API 转写（推荐）\n` +
+      `选「取消」= 不使用视觉 API（普通 OCR，图表数值类问题将拒答）`);
+    if (!keep) {
+      await api('/v1/rich/requeue', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doc_key: r.doc_key, use_vision: false }) });
+      toast('已改用普通 OCR：图表数值类问题将拒答');
+    }
+  } else {
+    alert(
+      `《${r.title || r.doc_key}》检测到复杂图表约 ${n} 个，但当前 API 未通过视觉能力验证\n` +
+      `（${v.reason || '未知原因'}）。\n\n` +
+      `图内数值不转写，图表数值类问题将拒答（宁可拒答，不可给错值）。\n` +
+      `请到「API / 模型配置」设置带视觉能力的 API Key 后，用文档管理中的重跑转写恢复。`);
+  }
+}
+$('#btn-path-ingest').onclick = () => withBusy($('#btn-path-ingest'), async () => {
+  const p = $('#path-ref').value.trim();
+  if (!p) return toast('请输入路径');
+  $('#upload-result').textContent = '入库处理中…（大文档约需 10-60 秒）';
+  try {
+    const r = await api('/v1/ingest', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: p, effective_date: $('#eff-date').value.trim() || null,
+                             use_vision: true }),
+    });
+    $('#upload-result').textContent =
+      r.notice || `${p}: ${r.status} ${r.reason || (r.n_chunks + ' 块')}`;
+    loadDocs();
+    watchUploadRich((r.rich_jobs || []).length && r.doc_key
+      ? [{doc_key: r.doc_key, eta: r.eta_seconds || 0}] : []);
+    if (r.needs_vision && r.doc_key) await visionPrompt(r);
+  } catch (e) { $('#upload-result').textContent = '失败: ' + e.message; }
+});
+$('#btn-del-docs').onclick = () => withBusy($('#btn-del-docs'), async () => {
+  if (!selDocs.size) return toast('请先勾选文档');
+  if (!confirm(`确认删除 ${selDocs.size} 份文档及其全部分块/向量？不可恢复。`)) return;
+  for (const key of selDocs) {
+    await api('/v1/documents/' + encodeURIComponent(key), { method: 'DELETE' });
+    selDocs.delete(key);
+  }
+  toast('已删除并重建索引');
+  updateScopeCount(); loadDocs();
+});
+
+// ---------- 配置 ----------
+async function loadCfg() {
+  const c = await api('/v1/config');
+  $('#cfg-provider').value = c.provider;
+  $('#cfg-model').value = c.model;
+  $('#cfg-baseurl').value = c.base_url;
+  $('#cfg-embed').value = c.embed;
+  $('#cfg-key').placeholder = c.key_set ? '已设置（留空不修改）' : '未设置';
+  $('#cfg-vision-model').value = c.vision_model || '';
+  $('#cfg-vision-baseurl').value = c.vision_base_url || '';
+  $('#cfg-vision-key').placeholder = c.vision_key_set ? '已设置（留空不修改）' : '留空复用主 Key';
+}
+$('#btn-save-cfg').onclick = () => withBusy($('#btn-save-cfg'), async () => {
+  const body = {
+    provider: $('#cfg-provider').value, model: $('#cfg-model').value,
+    base_url: $('#cfg-baseurl').value, embed: $('#cfg-embed').value,
+  };
+  const key = $('#cfg-key').value;
+  if (key) body.api_key = key;
+  const vm = $('#cfg-vision-model').value.trim();
+  if (vm) body.vision_model = vm;
+  const vb = $('#cfg-vision-baseurl').value.trim();
+  if (vb) body.vision_base_url = vb;
+  const vk = $('#cfg-vision-key').value;
+  if (vk) body.vision_api_key = vk;
+  await api('/v1/config', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  $('#cfg-result').textContent = '已保存到 .env（新请求生效）';
+  loadCfg();
+  checkLlm();   // 保存后立即体检连通性
+});
+$('#btn-test-vision').onclick = () => withBusy($('#btn-test-vision'), async () => {
+  $('#cfg-result').textContent = '视觉能力探测中…（发送已知数字测试图）';
+  try {
+    const r = await api('/v1/vision_check', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ force: true }),
+    });
+    $('#cfg-result').textContent = r.capable
+      ? `视觉能力验证通过（${r.model || '当前模型'}）`
+      : `视觉能力验证未通过：${r.reason} —— 图表数值类问题将拒答`;
+  } catch (e) { $('#cfg-result').textContent = '视觉探测失败: ' + e.message; }
+});
+$('#btn-test-llm').onclick = () => withBusy($('#btn-test-llm'), async () => {
+  $('#cfg-result').textContent = '测试中…';
+  try {
+    const r = await api('/v1/config/test', { method: 'POST' });
+    $('#cfg-result').textContent = r.ok ? `连通成功: ${r.model} → ${r.reply}` : `失败: ${r.error}`;
+    if (r.ok) markLlmOk();   // 重连成功 → 自动收起异常横幅
+  } catch (e) { $('#cfg-result').textContent = '失败: ' + e.message; }
+});
+
+loadDocs(); loadCfg(); loadHistory(); refreshRichGlobal();
+</script>
+</body>
+</html>

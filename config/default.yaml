@@ -1,0 +1,40 @@
+# policyrag 运行配置（计划 §三 config/default.yaml）
+# 改 prompt 必须 bump PROMPT_VERSION（query/pipeline.py）
+
+llm:
+  provider: anthropic          # anthropic | deepseek | glm
+  model: claude-opus-5-5
+  cheap_model: claude-haiku-5-5   # 查询重写/摘要等轻任务
+  effort:
+    rewrite: low
+    sufficiency: low
+    draft: high
+    review: low
+
+embedding:
+  backend: fastembed           # fastembed | hash（hash 仅冒烟测试）
+  model: BAAI/bge-small-zh-v1.5
+  batch_size: 16
+
+retrieval:
+  candidate_k: 50
+  top_k: 8
+  rrf_k: 60
+
+chunking:
+  min_chars: 80
+  target_chars: 500
+  max_chars: 800
+
+verify:
+  confidence_threshold: 0.55
+  enable_adversarial_review: false   # v1 启用
+
+memory:
+  omp_threads: 2
+  max_rss_mb: 1500              # 超限熔断拒新请求
+
+api:
+  workers: 1                    # 8GB 内存硬约束
+  limit_concurrency: 32         # GUI 加载并发 5+ 请求；4 会打爆 503
+  mcp_port: 8100

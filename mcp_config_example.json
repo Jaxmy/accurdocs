@@ -1,0 +1,42 @@
+{
+  "_comment": "accurdocs MCP 挂载配置示例——复制对应段落到你的客户端配置文件。将 <项目目录> 替换为 accurdocs 解压/克隆后的绝对路径（Windows 下用反斜杠或转义斜杠）。",
+  "_one_click": "推荐：项目根执行 python setup_mcp.py，自动生成本机可用配置并注册 Claude Code。",
+  "claude_code_cli": {
+    "_how": "命令行一键注册（推荐）: claude mcp add accurdocs -- <项目目录>\\start_mcp.bat",
+    "_config_file": "Claude Code: .mcp.json（项目根）或 ~/.claude.json 的 mcpServers",
+    "mcpServers": {
+      "accurdocs": {
+        "command": "cmd",
+        "args": ["/c", "<项目目录>\\start_mcp.bat"]
+      }
+    }
+  },
+  "cursor": {
+    "_config_file": "Cursor: .cursor/mcp.json（项目根）或 Cursor Settings → MCP → Global",
+    "mcpServers": {
+      "accurdocs": {
+        "command": "cmd",
+        "args": ["/c", "<项目目录>\\start_mcp.bat"]
+      }
+    }
+  },
+  "vscode_copilot": {
+    "_config_file": "VS Code: .vscode/mcp.json",
+    "servers": {
+      "accurdocs": {
+        "type": "stdio",
+        "command": "cmd",
+        "args": ["/c", "<项目目录>\\start_mcp.bat"]
+      }
+    }
+  },
+  "generic_mcp_client_stdio": {
+    "_note": "任意支持 MCP 的客户端/Agent 框架；macOS/Linux 用 python 直起（需先 pip install -e . 且配置好 .env）",
+    "windows": { "command": "cmd", "args": ["/c", "<项目目录>\\start_mcp.bat"] },
+    "posix": { "command": "python", "args": ["-m", "policyrag.adapters.mcp.server"], "cwd": "<项目目录>" }
+  },
+  "generic_mcp_client_http": {
+    "_note": "HTTP 传输：先运行 python -m policyrag.adapters.mcp.server --http --port 8100（端口可改），再连接 /mcp 端点",
+    "url": "http://127.0.0.1:8100/mcp"
+  }
+}

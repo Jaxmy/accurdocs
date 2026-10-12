@@ -1,0 +1,25 @@
+# 环境与密钥（绝不提交）
+.env
+.venv312/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 运行时数据（库文件/索引/富化资产/轨迹/日志）
+data/
+traces/
+blobs/
+config/local*
+*.log
+
+# 测试临时与构建产物
+tests/.tmp/
+dist/
+build/
+*.egg-info/
+
+# 测试运行落根目录的 trace 碎片（勿发布）
+t_rev_1/
+verify_*/
+victory_*/
