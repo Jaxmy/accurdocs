@@ -1,5 +1,7 @@
 <div align="center">
 
+[English](README.en.md) | **简体中文**
+
 # accurdocs
 
 **政策 / 金融长文档精准检索与分析 Agent**
