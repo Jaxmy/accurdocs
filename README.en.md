@@ -80,6 +80,10 @@ accurdocs/
 └── mcp_config_example.json   # MCP configuration templates for each client
 ```
 
+Full component workflow (ingest chain → hybrid index → query chain → deterministic hard gates → refuse/pass verdict):
+
+![accurdocs component workflow architecture](docs/arch/arch_v2_flat.png)
+
 ## Key Technologies
 
 | Layer | Technology | Purpose |

@@ -80,6 +80,10 @@ accurdocs/
 └── mcp_config_example.json   # 各客户端 MCP 配置模板
 ```
 
+组件工作流全景（入库链 → 混合索引 → 查询链 → 确定性硬闸 → 拒答/放行裁决）：
+
+![accurdocs 组件工作流架构](docs/arch/arch_v2_flat_cn.png)
+
 ## 关键技术
 
 | 层 | 技术 | 用途 |
